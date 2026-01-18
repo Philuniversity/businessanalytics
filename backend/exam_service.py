@@ -1,30 +1,28 @@
 from .database import get_connection
 
-
-def create_exam(pnr, title, exam_date, semester, degree):
+def create_exam(pnr, title, semester, degree):
     conn = get_connection()
     cur = conn.cursor()
     sql = """
-        INSERT INTO exam (pnr, title, exam_date, semester, degree)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO exams (pnr, title, semester, degree)
+        VALUES (%s, %s, %s, %s)
     """
-    cur.execute(sql, (pnr, title, exam_date, semester, degree))
+    cur.execute(sql, (pnr, title, semester, degree))
     conn.commit()
     cur.close()
     conn.close()
 
-
 def get_all_exams():
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM exam ORDER BY pnr ASC")
+    # Explizite Auswahl der verbleibenden Spalten
+    cur.execute("SELECT pnr, title, semester, degree FROM exams ORDER BY pnr ASC")
     rows = cur.fetchall()
     cur.close()
     conn.close()
     return rows
 
-
-def update_exam(pnr, title=None, exam_date=None, semester=None, degree=None):
+def update_exam(pnr, title=None, semester=None, degree=None):
     conn = get_connection()
     cur = conn.cursor()
 
@@ -34,9 +32,6 @@ def update_exam(pnr, title=None, exam_date=None, semester=None, degree=None):
     if title:
         sql_parts.append("title = %s")
         values.append(title)
-    if exam_date:
-        sql_parts.append("exam_date = %s")
-        values.append(exam_date)
     if semester is not None:
         sql_parts.append("semester = %s")
         values.append(semester)
@@ -48,7 +43,7 @@ def update_exam(pnr, title=None, exam_date=None, semester=None, degree=None):
         print("Keine Daten zum Aktualisieren angegeben.")
         return
 
-    sql = f"UPDATE exam SET {', '.join(sql_parts)} WHERE pnr = %s"
+    sql = f"UPDATE exams SET {', '.join(sql_parts)} WHERE pnr = %s"
     values.append(pnr)
 
     try:
@@ -61,14 +56,24 @@ def update_exam(pnr, title=None, exam_date=None, semester=None, degree=None):
         cur.close()
         conn.close()
 
+# In exam_service.py
 
 def delete_exam(pnr):
     conn = get_connection()
     cur = conn.cursor()
     try:
-        sql = "DELETE FROM exam WHERE pnr = %s"
-        cur.execute(sql, (pnr,))
+        sql = "DELETE FROM exams WHERE pnr = %s"
+        # Stellen Sie sicher, dass pnr den richtigen Typ hat
+        # Wenn pnr in der DB ein INTEGER ist:
+        pnr_int = int(pnr)
+        cur.execute(sql, (pnr_int,))
+        # Wenn pnr in der DB ein VARCHAR ist:
+        # pnr_str = str(pnr)
+        # cur.execute(sql, (pnr_str,))
         conn.commit()
+    except ValueError:
+        print(f"Ungültiger PNr-Wert: {pnr}")
+        conn.rollback()
     except Exception as e:
         conn.rollback()
         print("Fehler beim Löschen der Prüfung:", e)

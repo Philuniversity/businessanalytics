@@ -5,7 +5,7 @@ def create_grade(matno, pnr, grade, grade_date):
     conn = get_connection()
     cur = conn.cursor()
     sql = """
-        INSERT INTO grade (matno, pnr, grade, grade_date)
+        INSERT INTO grades (matno, pnr, grade, grade_date)
         VALUES (%s, %s, %s, %s)
     """
     cur.execute(sql, (matno, pnr, grade, grade_date))
@@ -18,11 +18,12 @@ def get_grades_for_student(matno):
     conn = get_connection()
     cur = conn.cursor()
     sql = """
-        SELECT grade.pnr, exam.title, grade.grade, grade.grade_date
-        FROM grade
-        JOIN exam ON grade.pnr = exam.pnr
-        WHERE grade.matno = %s
-        ORDER BY exam.title ASC
+        SELECT grades.pnr, exams.title, grades.grade, 
+               TO_CHAR(grades.grade_date, 'DD-MM-YYYY') as grade_date
+        FROM grades
+        JOIN exams ON grades.pnr = exams.pnr
+        WHERE grades.matno = %s
+        ORDER BY exams.title ASC
     """
     cur.execute(sql, (matno,))
     rows = cur.fetchall()
@@ -40,7 +41,7 @@ def get_exam_statistics(pnr):
             MIN(grade) AS min_grade,
             MAX(grade) AS max_grade,
             COUNT(*) AS participant_count
-        FROM grade
+        FROM grades
         WHERE pnr = %s
     """
     cur.execute(sql, (pnr,))
@@ -68,7 +69,7 @@ def update_grade(matno, pnr, grade=None, grade_date=None):
         print("Keine Änderungen angegeben.")
         return
 
-    sql = f"UPDATE grade SET {', '.join(sql_parts)} WHERE matno = %s AND pnr = %s"
+    sql = f"UPDATE grades SET {', '.join(sql_parts)} WHERE matno = %s AND pnr = %s"
     values.extend([matno, pnr])
 
     try:
@@ -86,7 +87,7 @@ def delete_grade(matno, pnr):
     conn = get_connection()
     cur = conn.cursor()
     try:
-        sql = "DELETE FROM grade WHERE matno = %s AND pnr = %s"
+        sql = "DELETE FROM grades WHERE matno = %s AND pnr = %s"
         cur.execute(sql, (matno, pnr))
         conn.commit()
     except Exception as e:
