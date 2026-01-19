@@ -41,6 +41,24 @@ function(input, output, session) {
     )
   })
 
+  observe({
+    sem_df <- dbGetQuery(con, "SELECT DISTINCT semester FROM exams ORDER BY semester")
+    updateSelectInput(
+      session,
+      "selected_semester",
+      choices = sem_df$semester
+    )
+  })
+
+  observe({
+    deg_df <- dbGetQuery(con, "SELECT DISTINCT degree FROM exams ORDER BY degree")
+    updateSelectInput(
+      session,
+      "selected_degree",
+      choices = deg_df$degree
+    )
+  })
+
   # =========================================================
   # AUTOMATISCHER TAB-WECHSEL
   # =========================================================
@@ -86,7 +104,7 @@ function(input, output, session) {
       con,
       "
       SELECT exams.title, exams.semester, grades.grade,
-       TO_CHAR(grades.grade_date, 'YYYY-MM-DD') AS grade_date
+             TO_CHAR(grades.grade_date, 'YYYY-MM-DD') AS grade_date
       FROM grades
       JOIN exams ON grades.pnr = exams.pnr
       WHERE grades.matno = $1
@@ -114,7 +132,7 @@ function(input, output, session) {
   output$exam_grades_table <- renderTable({
     req(input$selected_exam)
 
-    dbGetQuery(
+    df <- dbGetQuery(
       con,
       "
       SELECT students.firstname, students.lastname, grades.grade
@@ -125,6 +143,24 @@ function(input, output, session) {
       ",
       params = list(input$selected_exam)
     )
+
+    if (nrow(df) == 0) {
+      return(data.frame(
+        firstname = "",
+        lastname  = "Keine Noten vorhanden",
+        grade     = NA,
+        stringsAsFactors = FALSE
+      ))
+    }
+
+    gpa_row <- data.frame(
+      firstname = "",
+      lastname  = "GPA",
+      grade     = round(mean(df$grade, na.rm = TRUE), 2),
+      stringsAsFactors = FALSE
+    )
+
+    rbind(df, gpa_row)
   })
 
   output$exam_grades_plot <- renderPlot({
@@ -144,7 +180,8 @@ function(input, output, session) {
 
     ggplot(df, aes(x = grade, y = count)) +
       geom_col(width = 0.14, fill = "#337ab7") +
-      scale_x_continuous(limits = c(1, 5), breaks = seq(1, 5, by = 0.5)) +
+      scale_x_continuous(breaks = seq(1, 5, by = 0.5)) +
+      coord_cartesian(xlim = c(1, 5)) +
       theme_minimal(base_size = 14)
   })
 
@@ -154,30 +191,74 @@ function(input, output, session) {
   output$all_gpa_table <- renderTable({
     df <- gpa_df()
     df$gpa <- round(df$gpa, 2)
-    df
+    df <- df[order(df$gpa), ]
+
+    if (nrow(df) == 0) return(df)
+
+    median_row <- data.frame(
+      matno = NA,
+      firstname = "",
+      lastname = "Median",
+      gpa = round(median(df$gpa, na.rm = TRUE), 2),
+      stringsAsFactors = FALSE
+    )
+
+    sd_row <- data.frame(
+      matno = NA,
+      firstname = "",
+      lastname = "Std. Deviation",
+      gpa = round(sd(df$gpa, na.rm = TRUE), 2),
+      stringsAsFactors = FALSE
+    )
+
+    rbind(df, median_row, sd_row)
   })
 
   output$all_gpa_plot <- renderPlot({
-  df <- gpa_df()
-  df$gpa <- round(df$gpa, 2)
+    df <- gpa_df()
+    df$gpa <- round(df$gpa, 2)
 
-  ggplot(df, aes(x = gpa)) +
-    geom_histogram(
-      binwidth = 0.1,
-      boundary = 1,
-      closed = "left",
-      fill = "#337ab7"
-    ) +
-    scale_x_continuous(
-      breaks = seq(1, 5, by = 0.2)
-    ) +
-    coord_cartesian(xlim = c(1, 5)) +
-    labs(
-      x = "Durchschnittsnote",
-      y = "Anzahl Studierender"
-    ) +
-    theme_minimal(base_size = 14)
-})
+    ggplot(df, aes(x = gpa)) +
+      geom_histogram(
+        binwidth = 0.1,
+        boundary = 1,
+        closed = "left",
+        fill = "#337ab7"
+      ) +
+      scale_x_continuous(breaks = seq(1, 5, by = 0.2)) +
+      coord_cartesian(xlim = c(1, 5)) +
+      labs(
+        x = "Durchschnittsnote",
+        y = "Anzahl Studierender"
+      ) +
+      theme_minimal(base_size = 14)
+  })
+
+  output$gpa_semester_degree_table <- renderTable({
+    req(input$selected_semester, input$selected_degree)
+
+    gpa <- dbGetQuery(
+      con,
+      "
+      SELECT ROUND(AVG(g.grade)::numeric, 2) AS gpa
+      FROM grades g
+      JOIN exams e ON g.pnr = e.pnr
+      WHERE e.semester = $1
+        AND e.degree = $2
+      ",
+      params = list(
+        as.integer(input$selected_semester),
+        input$selected_degree
+      )
+    )
+
+    data.frame(
+      semester = as.integer(input$selected_semester),
+      degree = input$selected_degree,
+      gpa = gpa$gpa,
+      stringsAsFactors = FALSE
+    )
+  })
 
   # =========================================================
   # DB VERBINDUNG SCHLIESSEN
