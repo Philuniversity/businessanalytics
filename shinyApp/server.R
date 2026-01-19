@@ -6,14 +6,14 @@ function(input, output, session) {
   students_reactive <- reactive({
     dbGetQuery(
       con,
-      "SELECT matno, firstname, lastname FROM student ORDER BY lastname"
+      "SELECT matno, firstname, lastname FROM students ORDER BY lastname"
     )
   })
 
   exams_reactive <- reactive({
     dbGetQuery(
       con,
-      "SELECT pnr, title FROM exam ORDER BY title"
+      "SELECT pnr, title FROM exams ORDER BY title"
     )
   })
 
@@ -60,20 +60,16 @@ function(input, output, session) {
       con,
       "
       SELECT
-        student.matno,
-        student.firstname,
-        student.lastname,
-        student.semester,
-        student.degree,
-        AVG(grade.grade) AS gpa
-      FROM student
-      JOIN grade ON student.matno = grade.matno
+        students.matno,
+        students.firstname,
+        students.lastname,
+        AVG(grades.grade) AS gpa
+      FROM students
+      JOIN grades ON students.matno = grades.matno
       GROUP BY
-        student.matno,
-        student.firstname,
-        student.lastname,
-        student.semester,
-        student.degree
+        students.matno,
+        students.firstname,
+        students.lastname
       "
     )
   }
@@ -89,12 +85,12 @@ function(input, output, session) {
     dbGetQuery(
       con,
       "
-      SELECT exam.title, exam.semester, grade.grade,
-             TO_CHAR(grade.grade_date, 'YYYY-MM-DD') AS grade_date
-      FROM grade
-      JOIN exam ON grade.pnr = exam.pnr
-      WHERE grade.matno = $1
-      ORDER BY exam.title
+      SELECT exams.title, exams.semester, grades.grade,
+       TO_CHAR(grades.grade_date, 'YYYY-MM-DD') AS grade_date
+      FROM grades
+      JOIN exams ON grades.pnr = exams.pnr
+      WHERE grades.matno = $1
+      ORDER BY exams.title
       ",
       params = list(input$selected_student)
     )
@@ -105,7 +101,7 @@ function(input, output, session) {
 
     res <- dbGetQuery(
       con,
-      "SELECT ROUND(AVG(grade), 2) AS avg_grade FROM grade WHERE matno = $1",
+      "SELECT ROUND(AVG(grade), 2) AS avg_grade FROM grades WHERE matno = $1",
       params = list(input$selected_student)
     )
 
@@ -121,11 +117,11 @@ function(input, output, session) {
     dbGetQuery(
       con,
       "
-      SELECT student.firstname, student.lastname, student.semester, grade.grade
-      FROM grade
-      JOIN student ON grade.matno = student.matno
-      WHERE grade.pnr = $1
-      ORDER BY grade.grade
+      SELECT students.firstname, students.lastname, grades.grade
+      FROM grades
+      JOIN students ON grades.matno = students.matno
+      WHERE grades.pnr = $1
+      ORDER BY grades.grade
       ",
       params = list(input$selected_exam)
     )
@@ -138,7 +134,7 @@ function(input, output, session) {
       con,
       "
       SELECT grade, COUNT(*) AS count
-      FROM grade
+      FROM grades
       WHERE pnr = $1
       GROUP BY grade
       ORDER BY grade
