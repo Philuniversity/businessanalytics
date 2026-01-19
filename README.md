@@ -1,8 +1,8 @@
 # businessanalytics
 
-Used packages for Python:
--- tkinter
--- psycopg2
+Used packages for Python: <br /> 
+-- tkinter <br /> 
+-- psycopg2 <br /> 
 
 Used packages for R:
 -- shiny
