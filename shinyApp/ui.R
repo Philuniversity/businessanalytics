@@ -30,7 +30,7 @@ ui <- fluidPage(
           width = "250px"
         ),
 
-        tags$label("Exam:", style = "margin: 0;"),
+        tags$label("Exams:", style = "margin: 0;"),
         selectInput(
           "selected_exam",
           NULL,
@@ -60,7 +60,7 @@ ui <- fluidPage(
         ),
 
         tabPanel(
-          "Exam",
+          "Prüfungen",
           h3("Exam-Ergebnisse"),
           fluidRow(
             column(
@@ -96,7 +96,7 @@ ui <- fluidPage(
         ),
 
         tabPanel(
-          "Programme",
+          "Studiengang",
           h3("Durchschnittsnoten pro Semester und Studiengang"),
           fluidRow(
             column(
