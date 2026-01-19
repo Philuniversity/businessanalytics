@@ -8,8 +8,9 @@ library(ggplot2)
 # ===========================
 con <- dbConnect(
   RPostgres::Postgres(),
-  dbname = "businessanalytics_new",
-  host = "localhost",
-  port = 5432,
-  user = "johannesschmid"
+  dbname="examdb",#examdb
+  user="postgres",
+  password="12345",  # wie in db.py
+  host="localhost",
+  port="5432"
 )
